@@ -56,13 +56,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	sqlDB, err := db.Open(cfg.DB.Path)
+	sqlDB, driver, err := db.Open(cfg.DB.DSN)
 	if err != nil {
 		slog.Error("failed to open database", "err", err)
 		os.Exit(1)
 	}
 
-	store := db.NewStore(sqlDB)
+	store := db.NewStore(sqlDB, driver)
 	fbClient := facebook.NewClient(cfg.Facebook.APIVersion)
 	tokenMgr := token.New(store, fbClient.Limiter(), encKey)
 	pipeline := internalsync.New(store, fbClient, tokenMgr, cfg.Sync.BackfillDays)

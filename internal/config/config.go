@@ -21,7 +21,7 @@ type ServerConfig struct {
 }
 
 type DBConfig struct {
-	Path string `yaml:"path"`
+	DSN string `yaml:"dsn"`
 }
 
 type FacebookConfig struct {
@@ -69,8 +69,8 @@ func (c *Config) validate() error {
 	if c.Server.Addr == "" {
 		c.Server.Addr = ":8080"
 	}
-	if c.DB.Path == "" {
-		c.DB.Path = "./data.db"
+	if c.DB.DSN == "" {
+		c.DB.DSN = "./data.db"
 	}
 	if c.Facebook.APIVersion == "" {
 		c.Facebook.APIVersion = "v20.0"
