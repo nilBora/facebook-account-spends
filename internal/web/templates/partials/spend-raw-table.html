@@ -1,0 +1,89 @@
+{{define "spend-raw-table"}}
+{{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+{{if .SpendRawRows}}
+<div style="overflow-x:auto">
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Account</th>
+            <th>Date</th>
+            <th>Campaign</th>
+            <th>Adset</th>
+            <th style="text-align:right">Impressions</th>
+            <th style="text-align:right">Clicks</th>
+            <th style="text-align:right">Spend</th>
+            <th>Currency</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .SpendRawRows}}
+    <tr>
+        <td class="name-cell">
+            {{if .AccountName}}{{.AccountName}}{{else}}{{.AccountID}}{{end}}
+            <div style="font-size:0.75rem;color:var(--text-muted)">{{.AccountID}}</div>
+        </td>
+        <td class="date-cell">{{.Date}}</td>
+        <td class="name-cell">
+            {{if .CampaignName}}{{.CampaignName}}{{else}}{{.CampaignID}}{{end}}
+            {{if and .CampaignName .CampaignID}}<div style="font-size:0.75rem;color:var(--text-muted)">{{.CampaignID}}</div>{{end}}
+        </td>
+        <td class="name-cell">
+            {{if .AdsetName}}{{.AdsetName}}{{else}}{{.AdsetID}}{{end}}
+            {{if and .AdsetName .AdsetID}}<div style="font-size:0.75rem;color:var(--text-muted)">{{.AdsetID}}</div>{{end}}
+        </td>
+        <td style="text-align:right">{{.Impressions}}</td>
+        <td style="text-align:right">{{.Clicks}}</td>
+        <td class="spend-cell" style="text-align:right">{{formatSpend .Spend}}</td>
+        <td class="currency-cell">{{.Currency}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+</div>
+
+{{if gt .TotalPages 1}}
+<div class="pagination">
+    <span class="pagination-info">
+        {{if .TotalRows}}
+            {{mul (sub .Page 1) .PageSize | add 1}}–{{min (mul .Page .PageSize) .TotalRows}} of {{.TotalRows}}
+        {{end}}
+    </span>
+    <div class="pagination-controls">
+        {{if gt .Page 1}}
+        <button class="btn btn-outline btn-small"
+                hx-get="/web/spend"
+                hx-target="#spend-table"
+                hx-swap="innerHTML"
+                hx-include="#filter-form"
+                hx-vals='{"page": "{{sub .Page 1}}"}'>
+            ← Prev
+        </button>
+        {{else}}
+        <button class="btn btn-outline btn-small" disabled>← Prev</button>
+        {{end}}
+
+        <span class="pagination-current">{{.Page}} / {{.TotalPages}}</span>
+
+        {{if lt .Page .TotalPages}}
+        <button class="btn btn-outline btn-small"
+                hx-get="/web/spend"
+                hx-target="#spend-table"
+                hx-swap="innerHTML"
+                hx-include="#filter-form"
+                hx-vals='{"page": "{{add .Page 1}}"}'>
+            Next →
+        </button>
+        {{else}}
+        <button class="btn btn-outline btn-small" disabled>Next →</button>
+        {{end}}
+    </div>
+</div>
+{{end}}
+
+{{else}}
+<div class="empty-state">
+    <p>No spend data for this period</p>
+    <p class="hint">Run a sync to fetch data from Facebook</p>
+</div>
+{{end}}
+{{end}}

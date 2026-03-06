@@ -1,0 +1,44 @@
+{{define "account-table"}}
+{{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+{{if .Accounts}}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Account ID</th>
+            <th>Name</th>
+            <th>Currency</th>
+            <th>Status</th>
+            <th>Token</th>
+            <th>Last Synced</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .Accounts}}
+    <tr>
+        <td class="token-cell">{{.AccountID}}</td>
+        <td class="name-cell">{{.Name}}</td>
+        <td class="currency-cell">{{.Currency}}</td>
+        <td>
+            <span class="status-badge {{accountStatusClass .Status}}">
+                {{accountStatusLabel .Status}}
+            </span>
+        </td>
+        <td>
+            {{if $.TokenMap}}
+                <span class="token-pill">{{index $.TokenMap .TokenID}}</span>
+            {{else}}
+                <span class="token-pill">{{.TokenID}}</span>
+            {{end}}
+        </td>
+        <td class="date-cell">{{formatDate .LastSyncedAt}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+{{else}}
+<div class="empty-state">
+    <p>No accounts found</p>
+    <p class="hint">Add a token and click "Sync Accounts" to discover ad accounts</p>
+</div>
+{{end}}
+{{end}}

@@ -1,0 +1,21 @@
+{{define "nav"}}
+<nav class="navbar">
+    <a href="/" class="nav-brand">
+        <span class="text-gradient">FB Spend</span>
+    </a>
+    <div class="nav-links">
+        <a href="/"        class="nav-link{{if eq .ActivePage "dashboard"}} active{{end}}">Dashboard</a>
+        <a href="/tokens"  class="nav-link{{if eq .ActivePage "tokens"}} active{{end}}">Tokens</a>
+        <a href="/accounts" class="nav-link{{if eq .ActivePage "accounts"}} active{{end}}">Accounts</a>
+        <a href="/spend"   class="nav-link{{if eq .ActivePage "spend"}} active{{end}}">Spend</a>
+    </div>
+    <div class="nav-actions">
+        <button class="btn-icon" onclick="toggleTheme()" title="Toggle theme">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+        </button>
+    </div>
+</nav>
+{{end}}

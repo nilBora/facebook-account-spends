@@ -1,0 +1,18 @@
+server:
+  addr: ":8080"
+
+db:
+  path: "./data.db"
+
+facebook:
+  api_version: "v20.0"
+
+sync:
+  # cron expression: every day at 01:00
+  schedule: "0 1 * * *"
+  # days to backfill for attribution lag
+  backfill_days: 3
+
+security:
+  # generate: openssl rand -hex 32
+  encryption_key: "replace_with_64_hex_chars"

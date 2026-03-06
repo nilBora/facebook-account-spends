@@ -1,0 +1,62 @@
+{{define "token-table"}}
+{{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+{{if .Tokens}}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Token</th>
+            <th>Accounts</th>
+            <th>Expires</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .Tokens}}
+    <tr>
+        <td class="name-cell">{{.Name}}</td>
+        <td class="token-cell">{{maskToken .AccessToken}}</td>
+        <td class="count-cell">{{.AccountCount}}</td>
+        <td>
+            {{if .ExpiresAt}}
+                <span class="expiry-ok">{{formatDate .ExpiresAt}}</span>
+            {{else}}
+                <span class="expiry-ok">—</span>
+            {{end}}
+        </td>
+        <td>
+            {{if .IsActive}}
+                <span class="status-badge status-active">Active</span>
+            {{else}}
+                <span class="status-badge status-inactive">Inactive</span>
+            {{end}}
+            {{if .LastError}}
+                <div class="error-hint" title="{{.LastError}}">{{.LastError}}</div>
+            {{end}}
+        </td>
+        <td class="actions-cell">
+            <button class="btn btn-small btn-secondary"
+                    hx-get="/web/tokens/{{.ID}}/edit"
+                    hx-target="#modal-content"
+                    hx-swap="innerHTML"
+                    onclick="showModal()">Edit</button>
+            <button class="btn btn-small btn-outline"
+                    hx-post="/web/tokens/{{.ID}}/sync"
+                    hx-target="#tokens-table"
+                    hx-swap="innerHTML"
+                    title="Sync accounts from Facebook">Sync</button>
+            <button class="btn btn-small btn-danger"
+                    onclick="confirmDelete('{{.Name}}', '/web/tokens/{{.ID}}', '#tokens-table')">Delete</button>
+        </td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+{{else}}
+<div class="empty-state">
+    <p>No tokens added yet</p>
+    <p class="hint">Add a Facebook API token to get started</p>
+</div>
+{{end}}
+{{end}}

@@ -1,0 +1,35 @@
+{{define "spend-table"}}
+{{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+{{if .SpendRows}}
+<div class="table-container">
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Account</th>
+            <th>Date</th>
+            <th>Spend</th>
+            <th>Currency</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .SpendRows}}
+    <tr>
+        <td class="name-cell">
+            {{if .AccountName}}{{.AccountName}}{{else}}{{.AccountID}}{{end}}
+            <div style="font-size:0.75rem;color:var(--text-muted)">{{.AccountID}}</div>
+        </td>
+        <td class="date-cell">{{.Date}}</td>
+        <td class="spend-cell">{{formatSpend .TotalSpend}}</td>
+        <td class="currency-cell">{{.Currency}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+</div>
+{{else}}
+<div class="empty-state">
+    <p>No spend data for this period</p>
+    <p class="hint">Run a sync to fetch data from Facebook</p>
+</div>
+{{end}}
+{{end}}

@@ -1,0 +1,39 @@
+{{define "dashboard.html"}}
+{{template "layout-start" .}}
+
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <div class="header-actions">
+        <form style="display:flex;gap:0.5rem;align-items:center"
+              hx-post="/web/sync"
+              hx-target="#spend-table"
+              hx-swap="innerHTML">
+            <input type="date" name="date" value="{{.Date}}"
+                   style="padding:0.5rem 0.75rem;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--bg-primary);color:var(--text-primary)"/>
+            <button type="submit" class="btn btn-primary">
+                <span class="htmx-indicator">⟳</span>
+                Sync
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="dashboard-stats"
+     hx-get="/web/dashboard/stats"
+     hx-trigger="every 30s"
+     hx-swap="outerHTML">
+    {{template "dashboard-stats" .}}
+</div>
+
+<div class="page-header" style="margin-top:1.5rem">
+    <h2 style="font-size:1.125rem;font-weight:600">Spend — {{.Date}}</h2>
+</div>
+
+<div class="table-container">
+    <div id="spend-table">
+        {{template "spend-raw-table" .}}
+    </div>
+</div>
+
+{{template "layout-end" .}}
+{{end}}

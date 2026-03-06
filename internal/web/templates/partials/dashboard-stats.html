@@ -1,0 +1,26 @@
+{{define "dashboard-stats"}}
+{{if .Stats}}
+<div class="stats-grid">
+    <div class="stat-card stat-spend">
+        <div class="stat-value">{{formatSpend .Stats.TodaySpend}}</div>
+        <div class="stat-label">Today Spend</div>
+    </div>
+    <div class="stat-card stat-spend">
+        <div class="stat-value">{{formatSpend .Stats.YesterdaySpend}}</div>
+        <div class="stat-label">Yesterday Spend</div>
+    </div>
+    <div class="stat-card stat-active">
+        <div class="stat-value">{{.Stats.ActiveAccounts}}</div>
+        <div class="stat-label">Active Accounts</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Stats.TotalAccounts}}</div>
+        <div class="stat-label">Total Accounts</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Stats.TotalTokens}}</div>
+        <div class="stat-label">Active Tokens</div>
+    </div>
+</div>
+{{end}}
+{{end}}

@@ -1,0 +1,1 @@
+ALTER TABLE spend_raw ADD COLUMN campaign_name TEXT NOT NULL DEFAULT '';

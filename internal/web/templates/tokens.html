@@ -1,0 +1,24 @@
+{{define "tokens.html"}}
+{{template "layout-start" .}}
+
+<div class="page-header">
+    <h1>Tokens</h1>
+    <div class="header-actions">
+        <button class="btn btn-primary"
+                hx-get="/web/tokens/new"
+                hx-target="#modal-content"
+                hx-swap="innerHTML"
+                onclick="showModal()">
+            + Add Token
+        </button>
+    </div>
+</div>
+
+<div class="table-container">
+    <div id="tokens-table">
+        {{template "token-table" .}}
+    </div>
+</div>
+
+{{template "layout-end" .}}
+{{end}}

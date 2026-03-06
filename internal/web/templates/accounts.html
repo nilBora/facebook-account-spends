@@ -1,0 +1,39 @@
+{{define "accounts.html"}}
+{{template "layout-start" .}}
+
+<div class="page-header">
+    <h1>Ad Accounts</h1>
+    <div class="header-actions">
+        <button class="btn btn-outline"
+                hx-post="/web/accounts/sync"
+                hx-target="#accounts-table"
+                hx-swap="innerHTML">
+            <span class="htmx-indicator">⟳</span>
+            Sync All
+        </button>
+    </div>
+</div>
+
+{{if .Tokens}}
+<div class="filter-bar">
+    <label class="filter-label" for="token-filter">Token</label>
+    <select id="token-filter" name="token_id" class="filter-select"
+            hx-get="/web/accounts"
+            hx-target="#accounts-table"
+            hx-trigger="change">
+        <option value="">All tokens</option>
+        {{range .Tokens}}
+        <option value="{{.ID}}" {{if eq $.FilterTokenID .ID}}selected{{end}}>{{.Name}}</option>
+        {{end}}
+    </select>
+</div>
+{{end}}
+
+<div class="table-container">
+    <div id="accounts-table">
+        {{template "account-table" .}}
+    </div>
+</div>
+
+{{template "layout-end" .}}
+{{end}}

@@ -1,0 +1,43 @@
+{{define "base"}}
+<!doctype html>
+<html lang="en" {{if .Theme}}data-theme="{{.Theme}}"{{end}}>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>FB Spend Tracker</title>
+    <link rel="stylesheet" href="/static/style.css"/>
+    <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+    {{template "nav" .}}
+    <div class="container">{{block "page-content" .}}{{end}}</div>
+
+    <!-- Edit / create modal -->
+    <div id="modal-backdrop" class="modal-backdrop" onclick="hideModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Confirm delete modal -->
+    <div id="confirm-modal" class="modal-backdrop">
+        <div class="modal confirm-modal">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <button class="modal-close" onclick="hideConfirmModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this item?</p>
+                <p class="item-name" id="confirm-item-name"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideConfirmModal()">Cancel</button>
+                <button id="confirm-delete-btn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+{{end}}

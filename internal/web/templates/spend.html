@@ -1,0 +1,69 @@
+{{define "spend.html"}}
+{{template "layout-start" .}}
+
+<div class="page-header">
+    <h1>Spend</h1>
+</div>
+
+<div class="spend-controls">
+
+    <div class="control-card">
+        <div class="control-card-header">
+            <span class="control-card-title">Filter</span>
+            <span class="control-card-hint">Show data already saved in the database</span>
+        </div>
+        <form id="filter-form"
+              hx-get="/web/spend"
+              hx-target="#spend-table"
+              hx-swap="innerHTML"
+              hx-trigger="submit"
+              class="control-card-body">
+            <div class="control-field">
+                <label class="control-label">Date</label>
+                <input type="date" name="date" value="{{.Date}}"/>
+            </div>
+            <div class="control-separator">or range</div>
+            <div class="control-field">
+                <label class="control-label">From — To</label>
+                <div style="display:flex;gap:0.5rem;align-items:center">
+                    <input type="date" name="from" value="{{.DateFrom}}"/>
+                    <span style="color:var(--text-muted)">—</span>
+                    <input type="date" name="to" value="{{.DateTo}}"/>
+                </div>
+            </div>
+            <div class="control-field">
+                <label class="control-label">Account</label>
+                <input type="text" name="account_id" value="{{.AccountID}}" placeholder="act_... or name"/>
+            </div>
+            <button type="submit" class="btn btn-outline">Show</button>
+        </form>
+    </div>
+
+    <div class="control-card control-card-action">
+        <div class="control-card-header">
+            <span class="control-card-title">Sync from Facebook</span>
+            <span class="control-card-hint">Fetch fresh spend data via API for the selected date</span>
+        </div>
+        <form hx-post="/web/sync"
+              hx-target="#spend-table"
+              hx-swap="innerHTML"
+              class="control-card-body">
+            <div class="control-field">
+                <label class="control-label">Date to sync</label>
+                <input type="date" name="date" value="{{.Date}}"/>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <span class="htmx-indicator">⟳</span>
+                Sync
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<div id="spend-table">
+    {{template "spend-raw-table" .}}
+</div>
+
+{{template "layout-end" .}}
+{{end}}
