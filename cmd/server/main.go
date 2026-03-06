@@ -65,9 +65,9 @@ func main() {
 	store := db.NewStore(sqlDB, driver)
 	fbClient := facebook.NewClient(cfg.Facebook.APIVersion)
 	tokenMgr := token.New(store, fbClient.Limiter(), encKey)
-	pipeline := internalsync.New(store, fbClient, tokenMgr, cfg.Sync.BackfillDays)
+	pipeline := internalsync.New(store, fbClient, tokenMgr)
 
-	scheduler, err := internalsync.NewScheduler(pipeline, cfg.Sync.Schedule)
+	scheduler, err := internalsync.NewScheduler(pipeline, cfg.Sync.ScheduleYesterday, cfg.Sync.ScheduleToday)
 	if err != nil {
 		slog.Error("failed to create scheduler", "err", err)
 		os.Exit(1)
@@ -75,7 +75,7 @@ func main() {
 	scheduler.Start()
 	defer scheduler.Stop()
 
-	webHandler, err := web.New(store, tokenMgr, pipeline)
+	webHandler, err := web.New(store, tokenMgr, pipeline, encKey, cfg.Auth.Username, cfg.Auth.Password)
 	if err != nil {
 		slog.Error("failed to create web handler", "err", err)
 		os.Exit(1)
@@ -84,8 +84,12 @@ func main() {
 	mux := http.NewServeMux()
 	webHandler.Register(mux)
 
+	if cfg.Auth.Password == "" {
+		slog.Warn("auth.password is not set — web UI is unprotected")
+	}
+
 	slog.Info("server starting", "addr", cfg.Server.Addr, "version", version)
-	if err := http.ListenAndServe(cfg.Server.Addr, mux); err != nil {
+	if err := http.ListenAndServe(cfg.Server.Addr, webHandler.AuthMiddleware(mux)); err != nil {
 		slog.Error("server error", "err", err)
 		os.Exit(1)
 	}

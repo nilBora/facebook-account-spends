@@ -14,6 +14,12 @@ type Config struct {
 	Facebook FacebookConfig `yaml:"facebook"`
 	Sync     SyncConfig     `yaml:"sync"`
 	Security SecurityConfig `yaml:"security"`
+	Auth     AuthConfig     `yaml:"auth"`
+}
+
+type AuthConfig struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type ServerConfig struct {
@@ -29,8 +35,8 @@ type FacebookConfig struct {
 }
 
 type SyncConfig struct {
-	Schedule    string `yaml:"schedule"`
-	BackfillDays int   `yaml:"backfill_days"`
+	ScheduleYesterday string `yaml:"schedule_yesterday"`
+	ScheduleToday     string `yaml:"schedule_today"`
 }
 
 type SecurityConfig struct {
@@ -75,16 +81,20 @@ func (c *Config) validate() error {
 	if c.Facebook.APIVersion == "" {
 		c.Facebook.APIVersion = "v20.0"
 	}
-	if c.Sync.Schedule == "" {
-		c.Sync.Schedule = "0 1 * * *"
+	if c.Sync.ScheduleYesterday == "" {
+		c.Sync.ScheduleYesterday = "0 10 * * *"
 	}
-	if c.Sync.BackfillDays == 0 {
-		c.Sync.BackfillDays = 3
+	if c.Sync.ScheduleToday == "" {
+		c.Sync.ScheduleToday = "0 */2 * * *"
 	}
 
 	key, err := hex.DecodeString(c.Security.EncryptionKey)
 	if err != nil || len(key) != 32 {
 		return fmt.Errorf("security.encryption_key must be 64 hex chars (32 bytes); generate with: openssl rand -hex 32")
+	}
+
+	if c.Auth.Username == "" {
+		c.Auth.Username = "admin"
 	}
 
 	return nil

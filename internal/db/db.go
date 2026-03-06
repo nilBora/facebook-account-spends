@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"sort"
 	"strings"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "modernc.org/sqlite"
@@ -33,10 +34,17 @@ func Open(dsn string) (*sql.DB, string, error) {
 	switch driver {
 	case "postgres":
 		db, err = sql.Open("pgx", dsn)
+		if err == nil {
+			db.SetMaxOpenConns(20)
+			db.SetMaxIdleConns(5)
+			db.SetConnMaxLifetime(5 * time.Minute)
+		}
 	default:
 		connStr := fmt.Sprintf("%s?_journal_mode=WAL&_foreign_keys=on&_timeout=5000", dsn)
 		db, err = sql.Open("sqlite", connStr)
-		db.SetMaxOpenConns(1) // SQLite: single writer
+		if err == nil {
+			db.SetMaxOpenConns(1) // SQLite: single writer
+		}
 	}
 	if err != nil {
 		return nil, "", fmt.Errorf("open database: %w", err)

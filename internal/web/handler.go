@@ -31,23 +31,29 @@ func StaticFS() (fs.FS, error) {
 
 // Handler handles web UI requests.
 type Handler struct {
-	store    db.Store
-	tokenMgr *token.Manager
-	pipeline *sync.Pipeline
-	tmpl     *template.Template
+	store        db.Store
+	tokenMgr     *token.Manager
+	pipeline     *sync.Pipeline
+	tmpl         *template.Template
+	authKey      []byte
+	authUsername string
+	authPassword string
 }
 
 // New creates a new Handler.
-func New(store db.Store, tokenMgr *token.Manager, pipeline *sync.Pipeline) (*Handler, error) {
+func New(store db.Store, tokenMgr *token.Manager, pipeline *sync.Pipeline, authKey []byte, authUsername, authPassword string) (*Handler, error) {
 	tmpl, err := parseTemplates()
 	if err != nil {
 		return nil, fmt.Errorf("parse templates: %w", err)
 	}
 	return &Handler{
-		store:    store,
-		tokenMgr: tokenMgr,
-		pipeline: pipeline,
-		tmpl:     tmpl,
+		store:        store,
+		tokenMgr:     tokenMgr,
+		pipeline:     pipeline,
+		tmpl:         tmpl,
+		authKey:      authKey,
+		authUsername: authUsername,
+		authPassword: authPassword,
 	}, nil
 }
 
@@ -56,6 +62,11 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Static files
 	staticSub, _ := StaticFS()
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
+
+	// Auth
+	mux.HandleFunc("GET /login", h.handleLoginPage)
+	mux.HandleFunc("POST /login", h.handleLoginSubmit)
+	mux.HandleFunc("GET /logout", h.handleLogout)
 
 	// Pages
 	mux.HandleFunc("GET /{$}", h.handleDashboard)
@@ -226,6 +237,7 @@ func parseTemplates() (*template.Template, error) {
 		"tokens.html",
 		"accounts.html",
 		"spend.html",
+		"login.html",
 	}
 
 	for _, name := range pages {
