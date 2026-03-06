@@ -521,6 +521,41 @@ body {
 .empty-state p { margin-bottom: 1rem; }
 .empty-state .hint { font-size: 0.875rem; color: var(--text-muted); }
 
+/* Login page */
+.login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+}
+
+.login-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg, 12px);
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+}
+
+.login-logo {
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.login-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
 /* Alerts */
 .alert {
     padding: 0.75rem 1rem;

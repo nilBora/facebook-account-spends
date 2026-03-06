@@ -14,7 +14,6 @@ type Job interface {
 }
 
 // Pool runs jobs with a bounded number of concurrent workers.
-// Each token should have its own Pool to enforce per-token concurrency limits.
 type Pool struct {
 	concurrency int
 	jobs        chan Job
@@ -29,37 +28,29 @@ func New(concurrency int) *Pool {
 	}
 }
 
-// Start begins processing jobs from the queue until ctx is cancelled.
+// Start begins processing jobs from the queue until the channel is closed.
 func (p *Pool) Start(ctx context.Context) {
 	sem := make(chan struct{}, p.concurrency)
 
 	go func() {
-		for {
-			select {
-			case job, ok := <-p.jobs:
-				if !ok {
-					return
+		for job := range p.jobs {
+			sem <- struct{}{} // acquire slot
+			go func(j Job) {
+				defer func() {
+					<-sem // release slot
+					p.wg.Done()
+				}()
+				if err := j.Execute(ctx); err != nil {
+					slog.Error("job failed", "job", j.Name(), "err", err)
 				}
-				sem <- struct{}{} // acquire slot
-				p.wg.Add(1)
-				go func(j Job) {
-					defer func() {
-						<-sem // release slot
-						p.wg.Done()
-					}()
-					if err := j.Execute(ctx); err != nil {
-						slog.Error("job failed", "job", j.Name(), "err", err)
-					}
-				}(job)
-			case <-ctx.Done():
-				return
-			}
+			}(job)
 		}
 	}()
 }
 
-// Submit enqueues a job. Blocks if the queue is full.
+// Submit enqueues a job. wg.Add is called here so Wait() is always accurate.
 func (p *Pool) Submit(job Job) {
+	p.wg.Add(1)
 	p.jobs <- job
 }
 
@@ -68,7 +59,7 @@ func (p *Pool) Wait() {
 	p.wg.Wait()
 }
 
-// Close drains and closes the job channel.
+// Close signals that no more jobs will be submitted and waits for all to finish.
 func (p *Pool) Close() {
 	close(p.jobs)
 }

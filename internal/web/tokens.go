@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -147,7 +148,10 @@ func (h *Handler) handleTokenSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pipeline.DiscoverAccountsForToken(r.Context(), tok.ID, plaintext); err != nil {
+	// Use context.Background() so the sync is not cancelled if the browser
+	// closes the connection before the Facebook API call finishes.
+	// PostgreSQL/pgx strictly enforces context cancellation (unlike SQLite).
+	if err := h.pipeline.DiscoverAccountsForToken(context.Background(), tok.ID, plaintext); err != nil {
 		slog.Error("discovery failed", "token_id", tok.ID, "err", err)
 		h.renderError(w, http.StatusBadGateway, "discovery failed")
 		return

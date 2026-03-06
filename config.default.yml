@@ -2,17 +2,24 @@ server:
   addr: ":8080"
 
 db:
-  path: "./data.db"
+  # SQLite (dev): "./data.db"
+  # PostgreSQL (prod): "postgres://user:pass@host:5432/dbname?sslmode=disable"
+  dsn: "./data.db"
 
 facebook:
   api_version: "v20.0"
 
 sync:
-  # cron expression: every day at 01:00
-  schedule: "0 1 * * *"
-  # days to backfill for attribution lag
-  backfill_days: 3
+  # cron: rediscover accounts + sync yesterday's spend (runs when data is settled)
+  schedule_yesterday: "0 10 * * *"
+  # cron: sync today's spend for live tracking
+  schedule_today: "0 */2 * * *"
 
 security:
   # generate: openssl rand -hex 32
   encryption_key: "replace_with_64_hex_chars"
+
+auth:
+  username: "admin"
+  # leave empty to disable authentication
+  password: ""

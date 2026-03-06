@@ -14,21 +14,19 @@ import (
 
 const workerConcurrency = 4
 
-// Pipeline orchestrates the full sync: discover → fetch spend → backfill.
+// Pipeline orchestrates the full sync: discover → fetch spend.
 type Pipeline struct {
-	store       db.Store
-	fb          *facebook.Client
-	tokenMgr    *token.Manager
-	backfillDays int
+	store    db.Store
+	fb       *facebook.Client
+	tokenMgr *token.Manager
 }
 
 // New creates a Pipeline.
-func New(store db.Store, fb *facebook.Client, tokenMgr *token.Manager, backfillDays int) *Pipeline {
+func New(store db.Store, fb *facebook.Client, tokenMgr *token.Manager) *Pipeline {
 	return &Pipeline{
-		store:        store,
-		fb:           fb,
-		tokenMgr:     tokenMgr,
-		backfillDays: backfillDays,
+		store:    store,
+		fb:       fb,
+		tokenMgr: tokenMgr,
 	}
 }
 
@@ -161,30 +159,6 @@ func (p *Pipeline) DiscoverAccountsForToken(ctx context.Context, tokenID, access
 	_ = p.store.SetTokenError(ctx, tokenID, "")
 	slog.Info("discovered accounts", "token_id", tokenID, "count", len(dbAccounts))
 	return nil
-}
-
-// RunDaily runs discovery + today's sync + backfill for attribution lag.
-func (p *Pipeline) RunDaily(ctx context.Context) {
-	today := time.Now().UTC().Format("2006-01-02")
-	slog.Info("starting daily sync", "date", today)
-
-	if err := p.DiscoverAccounts(ctx); err != nil {
-		slog.Error("discovery failed", "err", err)
-	}
-
-	if err := p.SyncDate(ctx, today); err != nil {
-		slog.Error("daily sync failed", "date", today, "err", err)
-	}
-
-	// Backfill last N days for attribution lag.
-	for i := 1; i <= p.backfillDays; i++ {
-		backfillDate := time.Now().UTC().AddDate(0, 0, -i).Format("2006-01-02")
-		if err := p.SyncDate(ctx, backfillDate); err != nil {
-			slog.Error("backfill failed", "date", backfillDate, "err", err)
-		}
-	}
-
-	slog.Info("daily sync complete")
 }
 
 // insightsJob fetches spend for one account on one date.
