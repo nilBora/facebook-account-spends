@@ -1,0 +1,15 @@
+{{define "sync-logs.html"}}
+{{template "layout-start" .}}
+
+<div class="page-header">
+    <h1>Sync Logs</h1>
+</div>
+
+<div class="table-container">
+    <div id="sync-logs-table">
+        {{template "sync-logs-table" .}}
+    </div>
+</div>
+
+{{template "layout-end" .}}
+{{end}}

@@ -1,0 +1,22 @@
+{{define "sync-errors-list"}}
+<div class="modal-header">
+    <h2>Sync Errors</h2>
+    <button class="modal-close" onclick="hideModal()">&times;</button>
+</div>
+<div class="modal-body">
+{{if .SyncErrors}}
+<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.75rem">
+    {{range .SyncErrors}}
+    <li style="padding:0.75rem;background:var(--bg-secondary);border-radius:6px;border-left:3px solid var(--color-danger)">
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.25rem">{{.AccountID}}</div>
+        <div style="font-size:0.9rem;word-break:break-word">{{.Message}}</div>
+    </li>
+    {{end}}
+</ul>
+{{else}}
+<div class="empty-state">
+    <p>No errors recorded for this run</p>
+</div>
+{{end}}
+</div>
+{{end}}

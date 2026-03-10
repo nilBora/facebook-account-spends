@@ -91,6 +91,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /web/spend", h.handleSpendTable)
 	mux.HandleFunc("POST /web/sync", h.handleSyncRun)
 
+	// Sync logs
+	mux.HandleFunc("GET /sync-logs", h.handleSyncLogsPage)
+	mux.HandleFunc("GET /web/sync-logs/{id}/errors", h.handleSyncErrors)
+
 	// Dashboard
 	mux.HandleFunc("GET /web/dashboard/stats", h.handleDashboardStats)
 
@@ -131,6 +135,10 @@ type templateData struct {
 	PageSize   int
 	TotalRows  int
 	TotalPages int
+
+	// sync logs
+	SyncRuns   []db.SyncRun
+	SyncErrors []db.SyncRunError
 }
 
 func (h *Handler) render(w http.ResponseWriter, name string, data templateData) {
@@ -205,6 +213,16 @@ func parseTemplates() (*template.Template, error) {
 			}
 			return "status-inactive"
 		},
+		"runDuration": func(r db.SyncRun) string {
+			if r.FinishedAt == nil {
+				return "running..."
+			}
+			d := r.FinishedAt.Sub(r.StartedAt).Round(time.Second)
+			if d < time.Minute {
+				return fmt.Sprintf("%ds", int(d.Seconds()))
+			}
+			return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
+		},
 	}
 
 	tmpl := template.New("").Funcs(funcs)
@@ -220,6 +238,8 @@ func parseTemplates() (*template.Template, error) {
 		"spend-table",
 		"spend-raw-table",
 		"status-badge",
+		"sync-logs-table",
+		"sync-errors-list",
 	}
 
 	for _, name := range partials {
@@ -237,6 +257,7 @@ func parseTemplates() (*template.Template, error) {
 		"tokens.html",
 		"accounts.html",
 		"spend.html",
+		"sync-logs.html",
 		"login.html",
 	}
 

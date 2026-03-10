@@ -464,6 +464,113 @@ func (s *sqlStore) GetDashboardStats(ctx context.Context) (DashboardStats, error
 	return stats, nil
 }
 
+// --- Sync runs ---
+
+func (s *sqlStore) CreateSyncRun(ctx context.Context, trigger, syncDate string) (string, error) {
+	id := uuid.New().String()
+	_, err := s.db.ExecContext(ctx,
+		s.rebind(`INSERT INTO sync_runs(id, trigger, sync_date, started_at) VALUES(?,?,?,?)`),
+		id, trigger, syncDate, s.timeVal(time.Now().UTC()),
+	)
+	if err != nil {
+		return "", fmt.Errorf("create sync run: %w", err)
+	}
+	return id, nil
+}
+
+func (s *sqlStore) FinishSyncRun(ctx context.Context, id string, success, errCount int) error {
+	_, err := s.db.ExecContext(ctx,
+		s.rebind(`UPDATE sync_runs SET finished_at=?, success_count=?, error_count=? WHERE id=?`),
+		s.timeVal(time.Now().UTC()), success, errCount, id,
+	)
+	return err
+}
+
+func (s *sqlStore) AddSyncErrors(ctx context.Context, runID string, errs []SyncRunError) error {
+	if len(errs) == 0 {
+		return nil
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin add sync errors: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	stmt, err := tx.PrepareContext(ctx,
+		s.rebind(`INSERT INTO sync_errors(id, run_id, account_id, message) VALUES(?,?,?,?)`),
+	)
+	if err != nil {
+		return fmt.Errorf("prepare sync errors: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, e := range errs {
+		id := e.ID
+		if id == "" {
+			id = uuid.New().String()
+		}
+		if _, err := stmt.ExecContext(ctx, id, runID, e.AccountID, e.Message); err != nil {
+			return fmt.Errorf("insert sync error: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *sqlStore) ListSyncRuns(ctx context.Context, limit int) ([]SyncRun, error) {
+	rows, err := s.db.QueryContext(ctx,
+		s.rebind(`SELECT id, trigger, sync_date, started_at, finished_at, success_count, error_count
+		          FROM sync_runs ORDER BY started_at DESC LIMIT ?`),
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list sync runs: %w", err)
+	}
+	defer rows.Close()
+
+	var result []SyncRun
+	for rows.Next() {
+		var r SyncRun
+		var startedAt, finishedAt flexTime
+		if err := rows.Scan(&r.ID, &r.Trigger, &r.SyncDate, &startedAt, &finishedAt,
+			&r.SuccessCount, &r.ErrorCount); err != nil {
+			return nil, fmt.Errorf("scan sync run: %w", err)
+		}
+		if startedAt.Valid {
+			r.StartedAt = startedAt.T
+		}
+		r.FinishedAt = finishedAt.TimePtr()
+		result = append(result, r)
+	}
+	return result, rows.Err()
+}
+
+func (s *sqlStore) ListSyncErrors(ctx context.Context, runID string) ([]SyncRunError, error) {
+	rows, err := s.db.QueryContext(ctx,
+		s.rebind(`SELECT id, run_id, account_id, message, created_at
+		          FROM sync_errors WHERE run_id=? ORDER BY created_at`),
+		runID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list sync errors: %w", err)
+	}
+	defer rows.Close()
+
+	var result []SyncRunError
+	for rows.Next() {
+		var e SyncRunError
+		var createdAt flexTime
+		if err := rows.Scan(&e.ID, &e.RunID, &e.AccountID, &e.Message, &createdAt); err != nil {
+			return nil, fmt.Errorf("scan sync error: %w", err)
+		}
+		if createdAt.Valid {
+			e.CreatedAt = createdAt.T
+		}
+		result = append(result, e)
+	}
+	return result, rows.Err()
+}
+
 // --- helpers ---
 
 type scanner interface {
