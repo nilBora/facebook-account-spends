@@ -67,7 +67,7 @@ func main() {
 	tokenMgr := token.New(store, fbClient.Limiter(), encKey)
 	pipeline := internalsync.New(store, fbClient, tokenMgr)
 
-	scheduler, err := internalsync.NewScheduler(pipeline, cfg.Sync.ScheduleYesterday, cfg.Sync.ScheduleToday)
+	scheduler, err := internalsync.NewScheduler(pipeline, store, cfg.Sync.ScheduleYesterday, cfg.Sync.ScheduleToday)
 	if err != nil {
 		slog.Error("failed to create scheduler", "err", err)
 		os.Exit(1)

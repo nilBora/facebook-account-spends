@@ -4,13 +4,38 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	gosync "sync"
 	"time"
+
+	"github.com/google/uuid"
 
 	"facebook-account-parser/internal/db"
 	"facebook-account-parser/internal/facebook"
 	"facebook-account-parser/internal/queue"
 	"facebook-account-parser/internal/token"
 )
+
+// SyncResult holds the outcome of a SyncDate call.
+type SyncResult struct {
+	Success int
+	Errors  []db.SyncRunError
+}
+
+// syncErrorCollector collects per-account errors in a thread-safe way.
+type syncErrorCollector struct {
+	mu     gosync.Mutex
+	errors []db.SyncRunError
+}
+
+func (c *syncErrorCollector) add(accountID, message string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.errors = append(c.errors, db.SyncRunError{
+		ID:        uuid.New().String(),
+		AccountID: accountID,
+		Message:   message,
+	})
+}
 
 const workerConcurrency = 4
 
@@ -69,10 +94,11 @@ func (p *Pipeline) DiscoverAccounts(ctx context.Context) error {
 }
 
 // SyncDate fetches spend for all active accounts for the given date.
-func (p *Pipeline) SyncDate(ctx context.Context, date string) error {
+func (p *Pipeline) SyncDate(ctx context.Context, date string) SyncResult {
 	tokens, err := p.tokenMgr.ListActive(ctx)
 	if err != nil {
-		return fmt.Errorf("list active tokens: %w", err)
+		slog.Error("failed to list active tokens", "err", err)
+		return SyncResult{}
 	}
 
 	// Build a map of tokenID → plaintext token for quick lookup.
@@ -83,7 +109,8 @@ func (p *Pipeline) SyncDate(ctx context.Context, date string) error {
 
 	accounts, err := p.store.ListAdAccounts(ctx)
 	if err != nil {
-		return fmt.Errorf("list accounts: %w", err)
+		slog.Error("failed to list accounts", "err", err)
+		return SyncResult{}
 	}
 
 	// Skip only permanently closed accounts (101=closed, 102=any_closed).
@@ -101,12 +128,13 @@ func (p *Pipeline) SyncDate(ctx context.Context, date string) error {
 
 	if len(active) == 0 {
 		slog.Info("no accounts to sync", "date", date)
-		return nil
+		return SyncResult{}
 	}
 
 	slog.Info("syncing accounts", "date", date, "count", len(active))
 	start := time.Now()
 
+	collector := &syncErrorCollector{}
 	pool := queue.New(workerConcurrency)
 	pool.Start(ctx)
 
@@ -120,13 +148,19 @@ func (p *Pipeline) SyncDate(ctx context.Context, date string) error {
 			tokenID:     acc.TokenID,
 			accessToken: accessToken,
 			date:        date,
+			collector:   collector,
 		})
 	}
 
 	pool.Wait()
 	pool.Close()
 	slog.Info("syncing accounts done", "date", date, "count", len(active), "elapsed", time.Since(start).Round(time.Millisecond))
-	return nil
+
+	errCount := len(collector.errors)
+	return SyncResult{
+		Success: len(active) - errCount,
+		Errors:  collector.errors,
+	}
 }
 
 // FB returns the underlying Facebook client (used by web handlers for on-demand calls).
@@ -169,6 +203,7 @@ type insightsJob struct {
 	tokenID     string
 	accessToken string
 	date        string
+	collector   *syncErrorCollector
 }
 
 func (j *insightsJob) Name() string {
@@ -179,6 +214,9 @@ func (j *insightsJob) Execute(ctx context.Context) error {
 	rows, err := j.fb.FetchInsights(ctx, j.tokenID, j.accessToken, j.account.AccountID, j.date)
 	if err != nil {
 		_ = j.store.SetNextRetry(ctx, j.account.AccountID, time.Now().Add(5*time.Minute))
+		if j.collector != nil {
+			j.collector.add(j.account.AccountID, err.Error())
+		}
 		return fmt.Errorf("fetch insights %s/%s: %w", j.account.AccountID, j.date, err)
 	}
 
@@ -199,6 +237,9 @@ func (j *insightsJob) Execute(ctx context.Context) error {
 	}
 
 	if err := j.store.UpsertSpendRows(ctx, dbRows); err != nil {
+		if j.collector != nil {
+			j.collector.add(j.account.AccountID, err.Error())
+		}
 		return fmt.Errorf("save spend %s/%s: %w", j.account.AccountID, j.date, err)
 	}
 

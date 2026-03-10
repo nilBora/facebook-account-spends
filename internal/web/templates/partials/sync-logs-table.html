@@ -1,0 +1,44 @@
+{{define "sync-logs-table"}}
+{{if .SyncRuns}}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Started</th>
+            <th>Date</th>
+            <th>Duration</th>
+            <th>Trigger</th>
+            <th>OK</th>
+            <th>Errors</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .SyncRuns}}
+    <tr>
+        <td>{{formatTime .StartedAt}}</td>
+        <td>{{if .SyncDate}}{{.SyncDate}}{{else}}—{{end}}</td>
+        <td>{{runDuration .}}</td>
+        <td><span class="status-badge">{{.Trigger}}</span></td>
+        <td>{{.SuccessCount}}</td>
+        <td>
+            {{if gt .ErrorCount 0}}
+            <span class="status-badge status-inactive"
+                  style="cursor:pointer"
+                  hx-get="/web/sync-logs/{{.ID}}/errors"
+                  hx-target="#modal-content"
+                  hx-swap="innerHTML"
+                  onclick="showModal()">{{.ErrorCount}} errors</span>
+            {{else}}
+            <span class="status-badge status-active">0</span>
+            {{end}}
+        </td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+{{else}}
+<div class="empty-state">
+    <p>No sync runs recorded yet</p>
+    <p class="hint">Trigger a manual sync or wait for the scheduled job</p>
+</div>
+{{end}}
+{{end}}

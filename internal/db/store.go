@@ -80,6 +80,26 @@ type SpendByAccount struct {
 	TotalSpend  float64
 }
 
+// SyncRun represents a single sync run (manual or cron).
+type SyncRun struct {
+	ID           string
+	Trigger      string
+	SyncDate     string // YYYY-MM-DD date being synced
+	StartedAt    time.Time
+	FinishedAt   *time.Time
+	SuccessCount int
+	ErrorCount   int
+}
+
+// SyncRunError represents a per-account error within a sync run.
+type SyncRunError struct {
+	ID        string
+	RunID     string
+	AccountID string
+	Message   string
+	CreatedAt time.Time
+}
+
 // Store defines all persistence operations.
 type Store interface {
 	// Tokens
@@ -115,4 +135,11 @@ type Store interface {
 
 	// Dashboard
 	GetDashboardStats(ctx context.Context) (DashboardStats, error)
+
+	// Sync runs
+	CreateSyncRun(ctx context.Context, trigger, syncDate string) (string, error)
+	FinishSyncRun(ctx context.Context, id string, success, errCount int) error
+	AddSyncErrors(ctx context.Context, runID string, errs []SyncRunError) error
+	ListSyncRuns(ctx context.Context, limit int) ([]SyncRun, error)
+	ListSyncErrors(ctx context.Context, runID string) ([]SyncRunError, error)
 }

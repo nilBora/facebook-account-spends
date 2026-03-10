@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+
+	"facebook-account-parser/internal/db"
 )
 
 // Scheduler wraps cron and runs the pipeline on two schedules:
@@ -14,11 +16,13 @@ import (
 type Scheduler struct {
 	cron     *cron.Cron
 	pipeline *Pipeline
+	store    db.Store
 }
 
 // NewScheduler creates a Scheduler with two configurable cron jobs.
-func NewScheduler(pipeline *Pipeline, scheduleYesterday, scheduleToday string) (*Scheduler, error) {
+func NewScheduler(pipeline *Pipeline, store db.Store, scheduleYesterday, scheduleToday string) (*Scheduler, error) {
 	c := cron.New()
+	s := &Scheduler{cron: c, pipeline: pipeline, store: store}
 
 	// Morning job: rediscover accounts and sync the previous day.
 	// Runs in the morning so attribution-lag data from yesterday is settled.
@@ -27,13 +31,21 @@ func NewScheduler(pipeline *Pipeline, scheduleYesterday, scheduleToday string) (
 		yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
 		slog.Info("scheduler: morning sync started", "date", yesterday)
 
+		runID, _ := s.store.CreateSyncRun(ctx, "cron_yesterday", yesterday)
+
 		if err := pipeline.DiscoverAccounts(ctx); err != nil {
 			slog.Error("scheduler: discovery failed", "err", err)
 		}
-		if err := pipeline.SyncDate(ctx, yesterday); err != nil {
-			slog.Error("scheduler: yesterday sync failed", "date", yesterday, "err", err)
+		res := pipeline.SyncDate(ctx, yesterday)
+
+		if runID != "" {
+			_ = s.store.FinishSyncRun(ctx, runID, res.Success, len(res.Errors))
+			if len(res.Errors) > 0 {
+				_ = s.store.AddSyncErrors(ctx, runID, res.Errors)
+			}
 		}
-		slog.Info("scheduler: morning sync done", "date", yesterday)
+		slog.Info("scheduler: morning sync done", "date", yesterday,
+			"success", res.Success, "errors", len(res.Errors))
 	})
 	if err != nil {
 		return nil, err
@@ -45,25 +57,31 @@ func NewScheduler(pipeline *Pipeline, scheduleYesterday, scheduleToday string) (
 		today := time.Now().UTC().Format("2006-01-02")
 		slog.Info("scheduler: today sync started", "date", today)
 
-		if err := pipeline.SyncDate(ctx, today); err != nil {
-			slog.Error("scheduler: today sync failed", "date", today, "err", err)
+		runID, _ := s.store.CreateSyncRun(ctx, "cron_today", today)
+		res := pipeline.SyncDate(ctx, today)
+
+		if runID != "" {
+			_ = s.store.FinishSyncRun(ctx, runID, res.Success, len(res.Errors))
+			if len(res.Errors) > 0 {
+				_ = s.store.AddSyncErrors(ctx, runID, res.Errors)
+			}
 		}
-		slog.Info("scheduler: today sync done", "date", today)
+		slog.Info("scheduler: today sync done", "date", today,
+			"success", res.Success, "errors", len(res.Errors))
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &Scheduler{cron: c, pipeline: pipeline}, nil
+	return s, nil
 }
 
 // Start begins the scheduler.
 func (s *Scheduler) Start() {
-	entries := s.cron.Entries()
-	for _, e := range entries {
+	s.cron.Start()
+	for _, e := range s.cron.Entries() {
 		slog.Info("scheduler: job registered", "next_run", e.Next.Format("2006-01-02 15:04:05"))
 	}
-	s.cron.Start()
 }
 
 // Stop gracefully shuts down the scheduler.

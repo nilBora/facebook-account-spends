@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -45,13 +46,25 @@ func (h *Handler) handleSyncRun(w http.ResponseWriter, r *http.Request) {
 		date = time.Now().UTC().Format("2006-01-02")
 	}
 
-	go func() {
-		if err := h.pipeline.SyncDate(context.Background(), date); err != nil {
-			slog.Error("manual sync failed", "date", date, "err", err)
-		}
-	}()
+	// Use background context for the entire sync lifecycle: the request context
+	// may be canceled if the client disconnects while the sync is running,
+	// which would silently drop FinishSyncRun / AddSyncErrors writes.
+	bgCtx := context.Background()
 
-	// Return the spend table immediately; data will appear after sync completes.
+	runID, err := h.store.CreateSyncRun(bgCtx, "manual", date)
+	if err != nil {
+		slog.Error("failed to create sync run", "err", err)
+	}
+
+	res := h.pipeline.SyncDate(bgCtx, date)
+
+	if runID != "" {
+		_ = h.store.FinishSyncRun(bgCtx, runID, res.Success, len(res.Errors))
+		if len(res.Errors) > 0 {
+			_ = h.store.AddSyncErrors(bgCtx, runID, res.Errors)
+		}
+	}
+
 	rows, total, _ := h.store.ListSpendRaw(r.Context(), db.SpendFilter{Date: date, Page: 1, PageSize: 100})
 	h.render(w, "spend-raw-table", templateData{
 		SpendRawRows: rows,
@@ -59,7 +72,7 @@ func (h *Handler) handleSyncRun(w http.ResponseWriter, r *http.Request) {
 		Page:         1,
 		TotalRows:    total,
 		TotalPages:   1,
-		Success:      "Sync started for " + date,
+		Success:      fmt.Sprintf("Sync done: %d ok, %d errors", res.Success, len(res.Errors)),
 	})
 }
 
