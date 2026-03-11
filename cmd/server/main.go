@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 
@@ -18,6 +19,7 @@ import (
 )
 
 var version = "dev"
+var revision string = "local"
 
 type Options struct {
 	Config  string `short:"c" long:"config" env:"CONFIG" default:"config.yml" description:"path to config file"`
@@ -26,6 +28,9 @@ type Options struct {
 }
 
 func main() {
+	slog.Info("Facebook Account Parser: %s\n", revision)
+	slog.Info("System Time: %s", time.Now().Format(time.RFC3339))
+
 	var opts Options
 	p := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
 	if _, err := p.Parse(); err != nil {
