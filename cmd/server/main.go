@@ -28,8 +28,8 @@ type Options struct {
 }
 
 func main() {
-	slog.Info("Facebook Account Parser: %s\n", revision)
-	slog.Info("System Time: %s", time.Now().Format(time.RFC3339))
+	slog.Info("Facebook Account Parser", "revision", revision)
+	slog.Info("System Time", "time", time.Now().Format(time.RFC3339))
 
 	var opts Options
 	p := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
