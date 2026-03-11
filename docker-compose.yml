@@ -8,8 +8,10 @@ services:
       dockerfile: Dockerfile
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     restart: on-failure
     volumes:
       - ./config.yml:/srv/config.yml
